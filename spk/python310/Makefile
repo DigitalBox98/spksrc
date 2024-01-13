@@ -1,7 +1,7 @@
 SPK_NAME = python310
-SPK_VERS = 3.10.11
+SPK_VERS = 3.10.13
 SPK_VERS_MAJOR_MINOR = $(word 1,$(subst ., ,$(SPK_VERS))).$(word 2,$(subst ., ,$(SPK_VERS)))
-SPK_REV = 15
+SPK_REV = 19
 SPK_ICON = src/python3.png
 
 DEPENDS  = cross/$(SPK_NAME)
@@ -13,18 +13,22 @@ DESCRIPTION_FRE = Language de programmation Python.
 DESCRIPTION_SPN = Lenguaje de programación Python.
 STARTABLE = no
 DISPLAY_NAME = Python 3.10
-CHANGELOG = "1. Update to Python 3.10.11"
+CHANGELOG = "1. Update to Python 3.10.13"
 
 HOMEPAGE = https://www.python.org
 LICENSE  = PSF
 
 # Force building pure-python wheels
 WHEELS_PURE_PYTHON_PACKAGING_ENABLE = 1
-WHEELS  = src/requirements-pure.txt
+WHEELS = src/requirements-pure.txt
+
 # Force testing all wheel builds
 WHEELS_TEST_ALL = 0
+
 # Force compiler LTO optimizations
+ifeq ($(strip $(WHEELS_TEST_ALL)),0)
 ENV += PYTHON_OPTIMIZE=1
+endif
 
 SERVICE_SETUP = src/service-setup.sh
 
@@ -44,19 +48,10 @@ ifeq ($(strip $(WHEELS_TEST_ALL)),1)
 WHEELS += src/requirements-crossenv.txt
 WHEELS += src/requirements-abi3.txt
 
-# [bcrypt] and [cryptography]
-# Mandatory for rustc wheel building
-ENV += PYO3_CROSS_LIB_DIR=$(STAGING_INSTALL_PREFIX)/lib/
-ENV += PYO3_CROSS_INCLUDE_DIR=$(STAGING_INSTALL_PREFIX)/include/
-
 # [cryptography]
 # Use cross/cryptography to generate py36-abi3 limited API
 # NOTE: It's not possible to build py36-abi3 limited API using pip due to PEP517
 #       To generate py310-py310 regular build use src/requirements-crossenv.txt
-#
-# Mandatory mandatory of using OPENSSL_*_DIR starting with version >= 40
-ENV += OPENSSL_LIB_DIR=$(STAGING_INSTALL_PREFIX)/lib/
-ENV += OPENSSL_INCLUDE_DIR=$(STAGING_INSTALL_PREFIX)/include/
 DEPENDS += cross/cryptography
 
 # [gevent]
@@ -113,22 +108,27 @@ include ../../mk/spksrc.spk.mk
 ifeq ($(strip $(WHEELS_TEST_ALL)),1)
 
 # [greenlet]
-ifeq ($(call version_ge, $(TC_GCC), 7.5),1)
-WHEELS += src/requirements-crossenv-greenlet.txt
+ifeq ($(call version_ge, $(TC_GCC), 4.9),1)
+WHEELS += src/requirements-crossenv-greenlet-v2.txt
+ifeq ($(call version_lt, $(TC_GCC), 5.0),1)
+WHEELS_CPPFLAGS += [greenlet] -std=c++11 -fpermissive
+endif
 else
-WHEELS += src/requirements-crossenv-greenlet-gcc4.txt
+WHEELS += src/requirements-crossenv-greenlet-v1.txt
 endif
 
 # [numpy] <= 1.21.6 (armv5)
-# gcc-4.6.4 failed with exit status 1
-# https://github.com/numpy/numpy/issues/20664
-ifeq ($(findstring $(ARCH),$(ARMv5_ARCHS)),$(ARCH))
-WHEELS += src/requirements-crossenv-numpy-armv5.txt
+# This version is now unsupported using pip>=23.2.1
+ifneq ($(findstring $(ARCH),$(ARMv5_ARCHS)),$(ARCH))
 # [numpy] <= 1.22.4 (armv7l)
-else ifeq ($(findstring $(ARCH),$(ARMv7L_ARCHS)),$(ARCH))
+ifeq ($(findstring $(ARCH),$(ARMv7L_ARCHS)),$(ARCH))
 WHEELS += src/requirements-crossenv-numpy-armv7l.txt
-else
+else ifeq ($(call version_le, $(TC_GCC), 5.0),1)
+WHEELS += src/requirements-crossenv-numpy-gcc4.txt
+# [numpy] >= 1.25.0 requires c++17
+else ifeq ($(call version_gt, $(TC_GCC), 5.0),1)
 WHEELS += src/requirements-crossenv-numpy.txt
+endif
 endif
 # workaround for compiler bug:
 # https://github.com/numpy/numpy/issues/13622

@@ -1,6 +1,6 @@
 SPK_NAME = synocli-file
-SPK_VERS = 2.7
-SPK_REV = 19
+SPK_VERS = 3.2
+SPK_REV = 22
 SPK_ICON = src/synocli-file.png
 
 # packages depending on cross/zlib must be defined later, see below
@@ -11,12 +11,13 @@ DEPENDS += cross/mg
 DEPENDS += cross/jupp
 DEPENDS += cross/iconv
 DEPENDS += cross/dos2unix
+DEPENDS += cross/lsd
 
 OPTIONAL_DEPENDS  = cross/rmlint cross/rnm cross/micro cross/fzf cross/ripgrep cross/fd cross/sd
-OPTIONAL_DEPENDS += cross/bat cross/exa
-OPTIONAL_DEPENDS += cross/nnn
+OPTIONAL_DEPENDS += cross/bat cross/eza
+OPTIONAL_DEPENDS += cross/nnn cross/nnn_4.0
 
-MAINTAINER = SynoCommunity
+MAINTAINER = hgy59
 DISPLAY_NAME = SynoCli File Tools
 
 POST_STRIP_TARGET = synocli-file_extra_install
@@ -25,13 +26,11 @@ OPTIONAL_DESC =
 
 include ../../mk/spksrc.common.mk
 
-# rust issue with target 'armv5te-unknown-linux-gnueabi'
-# https://github.com/rust-lang/compiler-builtins/issues/420
-ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS) $(ARMv5_ARCHS)),$(ARCH))
+ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS)),$(ARCH))
 # build rust tools before packages depending on cross/zlib
 # These tools must use cross/zlib-ng instead of cross/zlib, otherwise will fail to find zlib (x64 only)
-DEPENDS += cross/bat cross/exa
-OPTIONAL_DESC := $(OPTIONAL_DESC)", bat, exa"
+DEPENDS += cross/bat cross/eza
+OPTIONAL_DESC := $(OPTIONAL_DESC)", bat, eza"
 endif
 
 # PPC archs except QorIQ
@@ -45,15 +44,20 @@ endif
 # packages depending on cross/zlib
 DEPENDS += cross/mc cross/pcre2 cross/fdupes cross/zstd
 
-ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS) $(ARMv5_ARCHS)),$(ARCH))
-# gcc with stdc++11 support
-ifneq ($(call version_lt, ${TCVERSION}, 6.0)$(call version_ge, ${TCVERSION}, 3.0),11)
-# to build rnm, GCC >= 4.8 is required
-DEPENDS += cross/rnm
-OPTIONAL_DESC := $(OPTIONAL_DESC)", rnm"
-# to build nnn -std=c11 is required
-DEPENDS += cross/nnn
+ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS)),$(ARCH))
 OPTIONAL_DESC := $(OPTIONAL_DESC)", nnn (n³)"
+ifeq ($(call version_ge, ${TCVERSION}, 7.0),1)
+ifneq ($(findstring $(ARCH),comcerto2k),$(ARCH))
+DEPENDS += cross/nnn
+else
+# comcerto2k for DSM>=7
+DEPENDS += cross/nnn_4.0
+endif
+else ifneq ($(findstring $(ARCH),$(32bit_ARCHS)),$(ARCH))
+DEPENDS += cross/nnn
+else
+# 32-bit archs for DSM<7
+DEPENDS += cross/nnn_4.0
 endif
 endif
 
@@ -76,9 +80,9 @@ endif
 PCRE2_CLI_FULL = 1
 export PCRE2_CLI_FULL
 
-DESCRIPTION = "SynoCli File Tools provide a set of small command-line utilities: less, tree, ncdu, jdupes, fdupes, rhash, mc \(midnight commander\), mg \(emacs-like text editor\), nano, jupp \(based on JOE - Joe\'s Own Editor 3.1\), file, detox, pcre2, zstd, lzip, plzip, detox, iconv, dos2unix tools$(OPTIONAL_DESC)."
+DESCRIPTION = "SynoCli File Tools provide a set of small command-line utilities: less, tree, ncdu, jdupes, fdupes, rhash, mc \(midnight commander\), mg \(emacs-like text editor\), nano, jupp \(based on JOE - Joe\'s Own Editor 3.1\), file, detox, pcre2, zstd, lzip, plzip, detox, iconv, dos2unix tools, lsd$(OPTIONAL_DESC)."
 STARTABLE = no
-CHANGELOG = "1. Update jdupes to support dedupe.<br/>2. Update fzf to v0.35.1.<br/>3. Update less to v608.<br/>4. Update nano to v7.0.<br/>5. Update nnn to v4.7."
+CHANGELOG = "1. Add lsd v1.0.0.<br/>2. Update bat to v0.24.0.<br/>3. Update eza to v0.16.1.<br/>4. Update fd to v8.7.0.<br/>5. Update fzf to v0.44.1.<br/>6. Update micro to v2.0.13.<br/>7. Update sd to v1.0.0."
 
 SERVICE_SETUP = src/service-setup.sh
 
@@ -95,7 +99,6 @@ SPK_COMMANDS += bin/file
 SPK_COMMANDS += bin/detox
 SPK_COMMANDS += bin/pcre2grep bin/pcre2test
 SPK_COMMANDS += bin/rmlint
-SPK_COMMANDS += bin/rnm
 SPK_COMMANDS += bin/zstd bin/unzstd bin/zstdcat bin/zstdmt bin/zstdgrep bin/zstdless
 SPK_COMMANDS += bin/lzip bin/plzip
 SPK_COMMANDS += bin/fdupes
@@ -106,11 +109,12 @@ SPK_COMMANDS += bin/fd
 SPK_COMMANDS += bin/sd
 SPK_COMMANDS += bin/mg
 SPK_COMMANDS += bin/bat
-SPK_COMMANDS += bin/exa
+SPK_COMMANDS += bin/eza
+SPK_COMMANDS += bin/lsd
 SPK_COMMANDS += bin/jmacs bin/joe bin/jpico bin/jstar bin/jupp bin/rjoe
 SPK_COMMANDS += bin/nnn
 SPK_COMMANDS += bin/iconv
-SPK_COMMANDS += bin/dos2unix bin/unix2dos bin/mac2unix bin/unix2mac 
+SPK_COMMANDS += bin/dos2unix bin/unix2dos bin/mac2unix bin/unix2mac
 
 SPK_COMMANDS += bin/rhash
 SPK_COMMANDS += bin/ed2k-link
@@ -126,6 +130,13 @@ SPK_COMMANDS += bin/tth-hash
 SPK_COMMANDS += bin/whirlpool-hash
 
 include ../../mk/spksrc.spk.mk
+
+ifeq ($(call version_ge, $(TC_GCC), 4.8.1),1)
+# A compiler with support for C++11 language features is required.
+DEPENDS += cross/rnm
+OPTIONAL_DESC := $(OPTIONAL_DESC)", rnm"
+SPK_COMMANDS += bin/rnm
+endif
 
 .PHONY: synocli-file_extra_install
 synocli-file_extra_install:

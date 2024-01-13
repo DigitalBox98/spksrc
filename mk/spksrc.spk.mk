@@ -282,6 +282,9 @@ endif
 # Wizard
 DSM_WIZARDS_DIR = $(WORK_DIR)/WIZARD_UIFILES
 
+ifneq ($(strip $(WIZARDS_TEMPLATES_DIR)),)
+WIZARDS_DIR = $(WORK_DIR)/generated-wizards
+endif
 ifneq ($(WIZARDS_DIR),)
 # export working wizards dir to the shell for use later at compile-time
 export SPKSRC_WIZARDS_DIR=$(WIZARDS_DIR)
@@ -390,11 +393,54 @@ ifeq ($(strip $(WIZARDS_DIR)),)
 	$(eval SPK_CONTENT += WIZARD_UIFILES)
 endif
 endif
+ifneq ($(strip $(WIZARDS_TEMPLATES_DIR)),)
+	@$(MSG) "Generate DSM Wizards from templates"
+	@mkdir -p $(WIZARDS_DIR)
+	$(eval IS_DSM_6_OR_GREATER = $(if $(filter 1,$(call version_ge, $(TCVERSION), 6.0)),true,false))
+	$(eval IS_DSM_7_OR_GREATER = $(if $(filter 1,$(call version_ge, $(TCVERSION), 7.0)),true,false))
+	$(eval IS_DSM_7 = $(IS_DSM_7_OR_GREATER))
+	$(eval IS_DSM_6 = $(if $(filter true,$(IS_DSM_6_OR_GREATER)),$(if $(filter true,$(IS_DSM_7)),false,true),false))
+	@for template in `find $(WIZARDS_TEMPLATES_DIR) -maxdepth 1 -type f -and \( $(WIZARD_FILE_NAMES) \) -print`; do \
+		template_filename="$$(basename $${template})"; \
+		template_name="$${template_filename%.*}"; \
+		if [ "$${template_name}" = "$${template_filename}" ]; then \
+			template_suffix=; \
+		else \
+			template_suffix=".$${template_filename##*.}"; \
+		fi; \
+		template_file_path="$(WIZARDS_TEMPLATES_DIR)/$${template_filename}"; \
+		for suffix in '' $(patsubst %,_%,$(LANGUAGES)) ; do \
+			template_file_localization_data_path="$(WIZARDS_TEMPLATES_DIR)/$${template_name}$${suffix}.yml"; \
+			output_file="$(WIZARDS_DIR)/$${template_name}$${suffix}$${template_suffix}"; \
+			if [ -f "$${template_file_localization_data_path}" ]; then \
+				{ \
+					echo "IS_DSM_6_OR_GREATER: $(IS_DSM_6_OR_GREATER)"; \
+					echo "IS_DSM_6: $(IS_DSM_6)"; \
+					echo "IS_DSM_7_OR_GREATER: $(IS_DSM_7_OR_GREATER)"; \
+					echo "IS_DSM_7: $(IS_DSM_7)"; \
+					cat "$${template_file_localization_data_path}"; \
+				} | mustache - "$${template_file_path}" >"$${output_file}"; \
+				if [ "$${template_suffix}" = "" ]; then \
+					jq_failed=0; \
+					errors=$$(jq . "$${output_file}" 2>&1) || jq_failed=1; \
+					if [ "$${jq_failed}" != "0" ]; then \
+						echo "Invalid wizard file generated $${output_file}:"; \
+						echo "$${errors}"; \
+						exit 1; \
+					fi; \
+				fi; \
+			fi; \
+		done; \
+	done
+endif
 ifneq ($(strip $(WIZARDS_DIR)),)
 	@$(MSG) "Create DSM Wizards"
 	$(eval SPK_CONTENT += WIZARD_UIFILES)
 	@mkdir -p $(DSM_WIZARDS_DIR)
 	@find $${SPKSRC_WIZARDS_DIR} -maxdepth 1 -type f -and \( $(WIZARD_FILE_NAMES) \) -print -exec cp -f {} $(DSM_WIZARDS_DIR) \;
+	@if [ -f "$(DSM_WIZARDS_DIR)/uninstall_uifile.sh" ] && [ -f "$(DSM_WIZARDS_DIR)/uninstall_uifile" ]; then \
+		rm "$(DSM_WIZARDS_DIR)/uninstall_uifile"; \
+	fi
 	@if [ -d "$(WIZARDS_DIR)$(TCVERSION)" ]; then \
 	    $(MSG) "Create DSM Version specific Wizards: $(WIZARDS_DIR)$(TCVERSION)"; \
 		find $${SPKSRC_WIZARDS_DIR}$(TCVERSION) -maxdepth 1 -type f -and \( $(WIZARD_FILE_NAMES) \) -print -exec cp -f {} $(DSM_WIZARDS_DIR) \; ;\
@@ -470,6 +516,29 @@ wheelclean: spkclean
 	rm -fr work-*/.wheel_done \
 	       work-*/wheelhouse \
 	       work-*/install/var/packages/**/target/share/wheelhouse
+	@make --no-print-directory dependency-flat | sort -u | grep cross/ | while read depend ; do \
+	   makefile="../../$${depend}/Makefile" ; \
+	   if grep -q spksrc.python-wheel.mk $${makefile} ; then \
+	      pkgstr=$$(grep ^PKG_NAME $${makefile}) ; \
+	      pkgname=$$(echo $${pkgstr#*=} | xargs) ; \
+	      echo "rm -fr work-*/$${pkgname}*\\n       work-*/.$${pkgname}-*" ; \
+	      rm -fr work-*/$${pkgname}* \
+                     work-*/.$${pkgname}-* ; \
+	   fi ; \
+	done
+
+wheelcleancache: wheelclean
+	rm -fr work-*/pip
+
+wheelcleanall: wheelcleancache
+	rm -fr ../../distrib/pip
+
+pythonclean: wheelcleanall
+	rm -fr work-*/.[Pp]ython*-install_done \
+	rm -fr work-*/crossenv
+
+pythoncleanall: pythonclean
+	rm -fr work-*/[Pp]ython* work-*/.python*
 
 all: package
 ifneq ($(filter 1 on ON,$(PSTAT)),)

@@ -1,5 +1,5 @@
 PKG_NAME = python310
-PKG_VERS = 3.10.11
+PKG_VERS = 3.10.13
 PKG_VERS_MAJOR_MINOR = $(word 1,$(subst ., ,$(PKG_VERS))).$(word 2,$(subst ., ,$(PKG_VERS)))
 PKG_EXT = tar.xz
 PKG_DIST_NAME = Python-$(PKG_VERS).$(PKG_EXT)
@@ -53,7 +53,7 @@ CONFIGURE_ARGS += ac_cv_file__dev_ptmx=no
 CONFIGURE_ARGS += ac_cv_file__dev_ptc=no
 CONFIGURE_ARGS += ac_cv_have_long_long_format=yes
 
-DEPENDS += cross/openssl
+DEPENDS += cross/openssl3
 CONFIGURE_ARGS += --with-ssl-default-suites=openssl
 
 DEPENDS += cross/gdbm
@@ -133,15 +133,25 @@ python310_install:
 
 
 # wheels to install in crossenv
-CROSSENV_WHEELS  = setuptools-rust==1.6.0
+CROSSENV_WHEELS  = setuptools-rust==1.7.0
 CROSSENV_WHEELS += setuptools-scm==7.1.0
-CROSSENV_WHEELS += wheel==0.40.0
-CROSSENV_WHEELS += poetry==1.4.2
-CROSSENV_WHEELS += Cython==0.29.34
-CROSSENV_WHEELS += flit==3.8.0
-CROSSENV_WHEELS += cryptography==40.0.2
+CROSSENV_WHEELS += cffi==1.15.1
+#
+# Cython version >= 3.x breaks PyYAML wheel
+# https://github.com/yaml/pyyaml/issues/601
+#
+# It also breaks numpy at crossenv creation time using github-action
+# https://numpy.org/devdocs/reference/distutils_status_migration.html
+# Python 3.12 considerations: scikit-build-core, meson-python
+#CROSSENV_WHEELS += Cython==3.0.2
+CROSSENV_WHEELS += Cython==0.29.36
+CROSSENV_WHEELS += flit==3.9.0
+ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS)),$(ARCH))
+CROSSENV_WHEELS += cryptography==41.0.3
+CROSSENV_WHEELS += poetry==1.6.1
+endif
 ifneq ($(findstring $(ARCH),$(ARMv5_ARCHS) $(OLD_PPC_ARCHS)),$(ARCH))
-CROSSENV_WHEELS += maturin==0.15.1
+CROSSENV_WHEELS += maturin==1.2.3
 endif
 
 # Create the crossenv in preparation for
@@ -150,12 +160,12 @@ endif
 python310_post_install: $(WORK_DIR)/python-cc.mk
 	mkdir -p $(PYTHON_LIB_CROSS)
 	cp -R $(HOSTPYTHON_LIB_NATIVE) $(PYTHON_LIB_CROSS)/../
-	@$(RUN) $(PYTHON_NATIVE) -m crossenv $(STAGING_INSTALL_PREFIX)/bin/python$(PKG_VERS_MAJOR_MINOR) --cc $${CC} --cxx $${CXX} --ar $${AR} --sysroot $${SYSROOT} --env LIBRARY_PATH= --manylinux manylinux2014 $(WORK_DIR)/crossenv/
+	@$(RUN) $(PYTHON_NATIVE) -m crossenv $(STAGING_INSTALL_PREFIX)/bin/python$(PKG_VERS_MAJOR_MINOR) --cc $(TC_PATH)$(TC_PREFIX)gcc --cxx $(TC_PATH)$(TC_PREFIX)c++ --ar $(TC_PATH)$(TC_PREFIX)ar --sysroot $(TC_SYSROOT) --env LIBRARY_PATH= --manylinux manylinux2014 $(WORK_DIR)/crossenv/
 	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) wget https://bootstrap.pypa.io/get-pip.py
-	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) build-python get-pip.py "pip==23.1.2" --no-setuptools --no-wheel --disable-pip-version-check
-	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) python get-pip.py "pip==23.1.2" --no-setuptools --no-wheel --disable-pip-version-check
-	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) build-pip --disable-pip-version-check install "setuptools==63.4.3" "wheel==0.40.0"
-	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) pip --disable-pip-version-check install "setuptools==63.4.3" "wheel==0.40.0"
+	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) build-python get-pip.py "pip==23.2.1" --no-setuptools --no-wheel --disable-pip-version-check
+	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) python get-pip.py "pip==23.2.1" --no-setuptools --no-wheel --disable-pip-version-check
+	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) build-pip --disable-pip-version-check install "setuptools==68.1.2" "wheel==0.41.2"
+	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) pip --disable-pip-version-check install "setuptools==68.1.2" "wheel==0.41.2"
 	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) build-pip --disable-pip-version-check install $(CROSSENV_WHEELS)
 	. $(WORK_DIR)/crossenv/bin/activate && $(RUN) pip --disable-pip-version-check install $(CROSSENV_WHEELS)
 ifneq ($(PYTHON_LIB_NATIVE),$(PYTHON_LIB_CROSS))
