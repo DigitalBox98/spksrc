@@ -1,0 +1,21 @@
+{
+    "extjsdemo.js": {
+        "SYNOCOMMUNITY.ExtJSDemoApp.AppInstance": {
+            "type": "app",
+            "title": "app:app_name",
+            "version": "0.1",
+            "icon": "images/extjsdemoapp-{0}.png",
+            "texts": "texts",
+            "allowMultiInstance": false,
+            "allUsers": false,
+            "appWindow": "SYNOCOMMUNITY.ExtJSDemoApp.AppWindow",
+            "depend": ["SYNOCOMMUNITY.ExtJSDemoApp.AppWindow"]
+        },
+        "SYNOCOMMUNITY.ExtJSDemoApp.AppWindow": {
+            "type": "lib",
+            "title": "app:app_name",
+            "icon": "images/extjsdemoapp-{0}.png",
+            "texts": "texts"
+        }
+    }
+}

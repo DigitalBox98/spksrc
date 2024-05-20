@@ -1,0 +1,10 @@
+[
+  {
+    "step_title": "Information",
+    "items": [
+      {
+        "desc": "ExtJSDemo is a DSM application aimed to illustrate Synology's GUI framework based on ExtJS.<br><br>For more information, you can visit the <a target=\"_blank\" href=\"https://github.com/DigitalBox98/spksrc\">ExtJSDemo Github page</a>."
+      }
+    ]
+  }
+]
