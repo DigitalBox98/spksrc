@@ -150,7 +150,7 @@ Ext.define("SYNOCOMMUNITY.ExtJSDemoApp.AppWindow", {
 			});	
 	
 			// FormPanel base
-			NewFormPanel = Ext.extend(Ext.FormPanel, {
+			NewFormPanel = Ext.extend(SYNO.ux.FormPanel, { // Ext.form.FormPanel
 				constructor: function (config) {
 					config = Ext.apply({
 						owner: null,
@@ -227,12 +227,15 @@ Ext.define("SYNOCOMMUNITY.ExtJSDemoApp.AppWindow", {
 							anchor: "-20"
 						},
 						items: [{
+							xtype: "syno_textfield",
 							fieldLabel: "name",
 							name: "name"
 						}, {
+							xtype: "syno_textfield",
 							fieldLabel: "launch_script",
 							name: "launch_script"
 						}, {
+							xtype: "syno_textfield",
 							fieldLabel: "status_command",
 							name: "status_command"
 						}]
@@ -250,7 +253,7 @@ Ext.define("SYNOCOMMUNITY.ExtJSDemoApp.AppWindow", {
 			});
 			
 			// Service window
-			ServiceEditorWindow = Ext.extend(SYNO.SDS.ModalWindow, {
+			ServiceEditorWindow = Ext.extend(SYNO.SDS.ModalWindow, { // Ext.Window
 				title: "service",
 				constructor: function (config, store, record) {
 					this.store = store;
