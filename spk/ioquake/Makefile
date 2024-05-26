@@ -31,7 +31,7 @@ ioquake-post-strip:
 	install -d $(STAGING_DIR)/var
 	install -d $(STAGING_DIR)/baseq3
 	install -d $(STAGING_DIR)/mission
-	install -m 644 src/q3a/baseq3/pak0.pk3 $(STAGING_DIR)/baseq3/pak0.pk3
+	#install -m 644 src/q3a/baseq3/pak0.pk3 $(STAGING_DIR)/baseq3/pak0.pk3
 	install -m 644 src/q3a/baseq3/pak1.pk3 $(STAGING_DIR)/baseq3/pak1.pk3
 	install -m 644 src/q3a/baseq3/pak2.pk3 $(STAGING_DIR)/baseq3/pak2.pk3
 	install -m 644 src/q3a/baseq3/pak3.pk3 $(STAGING_DIR)/baseq3/pak3.pk3
