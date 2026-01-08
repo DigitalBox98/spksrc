@@ -1,12 +1,12 @@
 SPK_NAME = dol
-SPK_VERS = 2.0.0
-SPK_REV = 3901
+SPK_VERS = 2.2.8
+SPK_REV = 3909
 SPK_ICON = src/dol.png
 DSM_UI_DIR = app
 
 DEPENDS  = cross/$(SPK_NAME)
 
-SPK_DEPENDS = "MariaDB10:dotnet-runtime"
+SPK_DEPENDS = "MariaDB10:dotnet10-runtime"
 
 MAINTAINER = DigitalBox98
 DESCRIPTION = DOL Server is a server emulator for the game Dark Age of Camelot written by the Dawn of Light community

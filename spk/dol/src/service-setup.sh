@@ -1,7 +1,7 @@
 CFG_FILE="${SYNOPKG_PKGDEST}/config/serverconfig.xml"
 PATH="${SYNOPKG_PKGDEST}:${PATH}"
 #SERVICE_COMMAND="mono --debug --gc=sgen --server ${SYNOPKG_PKGDEST}/DOLServer.exe"
-SERVICE_COMMAND="dotnet ${SYNOPKG_PKGDEST}/DOLServer.dll"
+SERVICE_COMMAND="/var/packages/dotnet10-runtime/target/share/dotnet/dotnet ${SYNOPKG_PKGDEST}/DOLServer.dll"
 SVC_BACKGROUND=y
 SVC_WRITE_PID=y
 
