@@ -25,7 +25,7 @@ SERVICE_SETUP = src/service-setup.sh
 NO_SERVICE_SHORTCUT = yes
 
 # Make sure ARCH is not defined
-override ARCH=
+override ARCH= noarch
 
 POST_STRIP_TARGET = dol_extra_install
 
